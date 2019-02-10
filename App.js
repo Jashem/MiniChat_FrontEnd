@@ -8,6 +8,7 @@ import {
   FlatList,
   TouchableOpacity
 } from "react-native";
+import { TypingAnimation } from "react-native-typing-animation";
 
 import { Constants } from "expo";
 import io from "socket.io-client";
@@ -16,28 +17,35 @@ import { Address } from "./address";
 export default class App extends React.Component {
   constructor(props) {
     super(props);
-    this.socket = io(Address);
     this.user = require("chance")
       .Chance()
       .first();
-    state = {
-      msg: "",
-      recivedMsg: []
-    };
   }
 
+  state = {
+    msg: "",
+    recivedMsg: [],
+    isTyping: false
+  };
+
   componentDidMount() {
+    this.socket = io(Address);
     this.socket.on("chat message", msg => {
-      console.log(msg);
       this.setState(prevState => ({
         recivedMsg: [msg, ...prevState.recivedMsg]
       }));
-      console.log(this.state.recivedMsg);
+    });
+
+    this.socket.on("typing", msg => {
+      this.setState({
+        isTyping: msg
+      });
     });
   }
 
   handleTextInput = text => {
     this.setState({ msg: text });
+    text ? this.socket.emit("typing", true) : this.socket.emit("typing", false);
   };
 
   sendMessage = () => {
@@ -45,12 +53,26 @@ export default class App extends React.Component {
       user: this.user,
       msg: this.state.msg
     });
+    this.socket.emit("typing", false);
     this.setState({ msg: "" });
   };
 
+  showTyping = () =>
+    this.state.isTyping ? (
+      <TypingAnimation
+        style={{ padding: 10, margin: 10 }}
+        dotColor="#B2DFDB"
+        dotMargin={8}
+        dotAmplitude={5}
+        dotRadius={7}
+        dotX={17}
+        dotY={6}
+      />
+    ) : null;
+
   renderItem = ({ item }) => (
     <View style={styles.list}>
-      <Text style={styles.font}>{item.user}</Text>
+      <Text style={styles.font}>{item.msg}</Text>
     </View>
   );
   render() {
@@ -73,6 +95,7 @@ export default class App extends React.Component {
             <Text>Send</Text>
           </TouchableOpacity>
         </View>
+        {this.showTyping()}
         <FlatList
           data={this.state.recivedMsg}
           renderItem={this.renderItem}
