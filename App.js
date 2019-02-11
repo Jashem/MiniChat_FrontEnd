@@ -13,6 +13,7 @@ import { TypingAnimation } from "react-native-typing-animation";
 import { Constants } from "expo";
 import io from "socket.io-client";
 import { Address } from "./address";
+import NewMessage from "./components/NewMessage";
 
 export default class App extends React.Component {
   constructor(props) {
@@ -48,10 +49,10 @@ export default class App extends React.Component {
     text ? this.socket.emit("typing", true) : this.socket.emit("typing", false);
   };
 
-  sendMessage = () => {
+  sendMessage = (user, msg) => {
     this.socket.emit("chat message", {
-      user: this.user,
-      msg: this.state.msg
+      user: user,
+      msg: msg
     });
     this.socket.emit("typing", false);
     this.setState({ msg: "" });
@@ -90,23 +91,12 @@ export default class App extends React.Component {
   render() {
     return (
       <KeyboardAvoidingView style={styles.container} behavior="padding" enabled>
-        <View style={styles.subBontainer}>
-          <TextInput
-            placeholder={`${this.user} type something cool`}
-            value={this.state.msg}
-            style={styles.input}
-            multiline
-            autoFocus
-            onChangeText={this.handleTextInput}
-          />
-          <TouchableOpacity
-            style={styles.button}
-            onPress={this.sendMessage}
-            disabled={this.state.msg ? false : true}
-          >
-            <Text>Send</Text>
-          </TouchableOpacity>
-        </View>
+        <NewMessage
+          user={this.user}
+          message={this.state.msg}
+          onChange={this.handleTextInput}
+          sendMessage={this.sendMessage}
+        />
         {this.showTyping()}
         <FlatList
           data={this.state.recivedMsg}
@@ -128,21 +118,7 @@ const styles = StyleSheet.create({
     marginRight: 0,
     marginBottom: 0
   },
-  subBontainer: {
-    flexDirection: "row"
-  },
-  input: {
-    backgroundColor: "#fff",
-    height: 50,
-    width: "80%"
-  },
-  button: {
-    height: 50,
-    width: "20%",
-    backgroundColor: "#B2DFDB",
-    alignItems: "center",
-    justifyContent: "center"
-  },
+
   list: {
     borderRadius: 15,
     marginBottom: 10
