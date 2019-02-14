@@ -10,7 +10,7 @@ import {
 const NewMessage = props => (
   <View style={styles.subBontainer}>
     <TextInput
-      placeholder={`${props.user} type something cool`}
+      placeholder={`${props.userName} type something cool`}
       value={props.message}
       style={styles.input}
       multiline
@@ -19,7 +19,9 @@ const NewMessage = props => (
     />
     <TouchableOpacity
       style={styles.button}
-      onPress={() => props.sendMessage(props.user, props.message)}
+      onPress={() =>
+        props.sendMessage(props.userName, props.userId, props.message)
+      }
       disabled={props.message ? false : true}
     >
       <Text>Send</Text>

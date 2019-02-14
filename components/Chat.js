@@ -1,5 +1,5 @@
 import React from "react";
-import { KeyboardAvoidingView, StyleSheet } from "react-native";
+import { KeyboardAvoidingView, StyleSheet, AsyncStorage } from "react-native";
 import { TypingAnimation } from "react-native-typing-animation";
 
 import { Constants } from "expo";
@@ -7,16 +7,10 @@ import io from "socket.io-client";
 import { Address } from "../address";
 import NewMessage from "./NewMessage";
 import MessageList from "./MessageList";
-
 export default class Chat extends React.Component {
-  constructor(props) {
-    super(props);
-    this.user = require("chance")
-      .Chance()
-      .first();
-  }
-
   state = {
+    userName: "",
+    userId: "",
     msg: "",
     recivedMsg: [],
     isTyping: false
@@ -24,9 +18,11 @@ export default class Chat extends React.Component {
 
   componentDidMount() {
     this.socket = io(Address);
+    this.determineUserName();
+
     this.socket.on("chat message", msg => {
       this.setState(prevState => ({
-        recivedMsg: [msg, ...prevState.recivedMsg]
+        recivedMsg: [...msg, ...prevState.recivedMsg]
       }));
     });
 
@@ -37,14 +33,50 @@ export default class Chat extends React.Component {
     });
   }
 
+  determineUserName = async () => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      if (userId) {
+        this.socket.emit("have Id", userId);
+        this.socket.on("have Id", msg => {
+          console.log(msg);
+          this.setState({
+            userName: msg.name,
+            userId: msg._id
+          });
+        });
+
+        this.socket.on("invalid Id", msg => {
+          AsyncStorage.setItem("userId", msg._id);
+          this.setState({
+            userName: msg.name,
+            userId: msg._id
+          });
+        });
+      } else {
+        this.socket.emit("need Id");
+        this.socket.on("need Id", msg => {
+          AsyncStorage.setItem("userId", msg._id);
+          this.setState({
+            userName: msg.name,
+            userId: msg._id
+          });
+        });
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
   handleTextInput = text => {
     this.setState({ msg: text });
     text ? this.socket.emit("typing", true) : this.socket.emit("typing", false);
   };
 
-  sendMessage = (user, msg) => {
+  sendMessage = (userName, userId, msg) => {
     this.socket.emit("chat message", {
-      user: user,
+      userName,
+      userId,
       msg: msg
     });
     this.socket.emit("typing", false);
@@ -68,13 +100,17 @@ export default class Chat extends React.Component {
     return (
       <KeyboardAvoidingView style={styles.container} behavior="padding" enabled>
         <NewMessage
-          user={this.user}
+          userName={this.state.userName}
+          userId={this.state.userId}
           message={this.state.msg}
           onChange={this.handleTextInput}
           sendMessage={this.sendMessage}
         />
         {this.showTyping()}
-        <MessageList message={this.state.recivedMsg} sender={this.user} />
+        <MessageList
+          message={this.state.recivedMsg}
+          sender={this.state.userName}
+        />
       </KeyboardAvoidingView>
     );
   }
