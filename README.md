@@ -26,3 +26,4 @@ start the client app.
 
 - Add pagination
 - Add read receipts that show to a user that a message has been read by another user
+- Add image and gif support
